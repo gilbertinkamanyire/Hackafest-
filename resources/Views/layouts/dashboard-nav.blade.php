@@ -62,6 +62,16 @@
             </a>
             @endif
 
+            <!-- Gemma AI Intelligence Hub -->
+            <a href="{{ route('ai.index') }}" 
+               style="display: flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.95rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; text-decoration: none; transition: all 0.25s ease;
+               {{ request()->routeIs('ai.*') ? 'background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); box-shadow: 0 0 15px rgba(168, 85, 247, 0.2);' : 'color: #94a3b8; border: 1px solid transparent;' }}"
+               onmouseover="this.style.color='#c084fc'; this.style.background='rgba(168, 85, 247, 0.08)';"
+               onmouseout="if(!{{ request()->routeIs('ai.*') ? 'true' : 'false' }}){ this.style.color='#94a3b8'; this.style.background='transparent'; }">
+                <i class="ti ti-sparkles" style="font-size: 1.05rem; color: #c084fc;"></i>
+                <span>Gemma AI</span>
+            </a>
+
             <!-- Admin Console (if Admin) -->
             @if(Auth::check() && Auth::user()->hasRole('Admin'))
             <a href="{{ route('admin.dashboard') }}" 
@@ -138,6 +148,13 @@
                             <span>Case Dockets</span>
                         </a>
                         @endif
+
+                        <a href="{{ route('ai.index') }}" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.85rem; border-radius: 8px; font-size: 0.825rem; color: #cbd5e1; text-decoration: none; transition: all 0.2s;"
+                           onmouseover="this.style.background='rgba(168, 85, 247, 0.12)'; this.style.color='#c084fc';"
+                           onmouseout="this.style.background='transparent'; this.style.color='#cbd5e1';">
+                            <i class="ti ti-sparkles" style="font-size: 1rem; color: #c084fc;"></i>
+                            <span>Gemma AI Hub</span>
+                        </a>
 
                         <div style="height: 1px; background: rgba(71, 85, 105, 0.25); margin: 0.35rem 0;"></div>
 

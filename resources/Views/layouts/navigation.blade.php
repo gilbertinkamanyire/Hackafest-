@@ -38,6 +38,24 @@
                         <i class="ti ti-files" style="font-size: 1rem;"></i>
                         Evidence
                     </a>
+                    @if(Auth::check() && Auth::user()->hasAnyRole(['Lawyer', 'Judge', 'Admin']))
+                    <a href="{{ route('cases.index') }}"
+                       style="display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; text-decoration: none; transition: all 0.2s;
+                       {{ request()->routeIs('cases.*') ? 'background: rgba(168,85,247,0.15); color: #c084fc; border: 1px solid rgba(168,85,247,0.3);' : 'color: #94a3b8; border: 1px solid transparent;' }}"
+                       onmouseover="this.style.background='rgba(168,85,247,0.1)'; this.style.color='#e2e8f0';"
+                       onmouseout="if(!{{ request()->routeIs('cases.*') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='#94a3b8'; }">
+                        <i class="ti ti-briefcase" style="font-size: 1rem;"></i>
+                        Cases
+                    </a>
+                    @endif
+                    <a href="{{ route('ai.index') }}"
+                       style="display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; text-decoration: none; transition: all 0.2s;
+                       {{ request()->routeIs('ai.*') ? 'background: rgba(168,85,247,0.15); color: #c084fc; border: 1px solid rgba(168,85,247,0.3);' : 'color: #94a3b8; border: 1px solid transparent;' }}"
+                       onmouseover="this.style.background='rgba(168,85,247,0.1)'; this.style.color='#e2e8f0';"
+                       onmouseout="if(!{{ request()->routeIs('ai.*') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='#94a3b8'; }">
+                        <i class="ti ti-sparkles" style="font-size: 1rem; color: #c084fc;"></i>
+                        Gemma AI
+                    </a>
                     @if(Auth::check() && Auth::user()->hasRole('Admin'))
                     <a href="{{ route('admin.dashboard') }}"
                        style="display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; text-decoration: none; transition: all 0.2s;
@@ -109,6 +127,14 @@
             </a>
             <a href="{{ route('evidence.index') }}" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; text-decoration: none; color: {{ request()->routeIs('evidence.*') ? '#fbbf24' : '#94a3b8' }}; background: {{ request()->routeIs('evidence.*') ? 'rgba(245,158,11,0.1)' : 'transparent' }};">
                 <i class="ti ti-files"></i> Evidence
+            </a>
+            @if(Auth::check() && Auth::user()->hasAnyRole(['Lawyer', 'Judge', 'Admin']))
+            <a href="{{ route('cases.index') }}" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; text-decoration: none; color: {{ request()->routeIs('cases.*') ? '#c084fc' : '#94a3b8' }}; background: {{ request()->routeIs('cases.*') ? 'rgba(168,85,247,0.1)' : 'transparent' }};">
+                <i class="ti ti-briefcase"></i> Cases
+            </a>
+            @endif
+            <a href="{{ route('ai.index') }}" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; text-decoration: none; color: {{ request()->routeIs('ai.*') ? '#c084fc' : '#94a3b8' }}; background: {{ request()->routeIs('ai.*') ? 'rgba(168,85,247,0.1)' : 'transparent' }};">
+                <i class="ti ti-sparkles"></i> Gemma AI
             </a>
             @if(Auth::check() && Auth::user()->hasRole('Admin'))
             <a href="{{ route('admin.dashboard') }}" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; text-decoration: none; color: #94a3b8;">
