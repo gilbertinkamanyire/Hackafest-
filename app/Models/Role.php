@@ -15,7 +15,7 @@ class Role extends Model
 
     // Fillable fields
     protected $fillable = [
-        'name',       // e.g., Admin, Judge, Investigator, Lawyer
+        'name',       // e.g., Admin, Judge, Lawyer, Witness
         'description' // optional description
     ];
 

@@ -75,7 +75,9 @@
                                         onfocus="this.style.borderColor='#c084fc'; this.style.boxShadow='0 0 0 4px rgba(168, 85, 247, 0.1)'"
                                         onblur="this.style.borderColor='rgba(71, 85, 105, 0.4)'; this.style.boxShadow='none'">
                                         @foreach($roles as $role)
-                                            <option value="{{ $role->id }}" style="background: #0f172a; padding: 0.5rem;">{{ $role->name }}</option>
+                                            @if(strtolower($role->name) !== 'investigator')
+                                                <option value="{{ $role->id }}" style="background: #0f172a; padding: 0.5rem;">{{ $role->name }}</option>
+                                            @endif
                                         @endforeach
                                     </select>
                                 </div>

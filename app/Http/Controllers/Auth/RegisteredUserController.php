@@ -41,37 +41,37 @@ class RegisteredUserController extends Controller
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('users', 'email')],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'phone' => ['nullable', 'string', 'max:20'],
-            'role_requested' => ['nullable', 'string', 'in:Judge,Lawyer'],
+            'role_requested' => ['nullable', 'string', 'in:Witness,Lawyer,Judge'],
         ]);
+
+        $selectedRole = $request->role_requested ?: 'Witness';
+        $requiresReview = in_array($selectedRole, ['Judge', 'Lawyer']);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'phone' => $request->phone,
-            'role_requested' => $request->role_requested,
-            'is_verified' => false, // Default to unverified
+            'role_requested' => $requiresReview ? $selectedRole : null,
+            'is_verified' => !$requiresReview, // Witnesses get instant access
         ]);
 
-        // Assign role if requested
-        if ($request->role_requested) {
-            $role = \App\Models\Role::where('name', $request->role_requested)->first();
-            if ($role) {
-                $user->roles()->attach($role->id);
-            }
+        // Assign chosen role
+        $role = \App\Models\Role::where('name', $selectedRole)->first();
+        if ($role) {
+            $user->roles()->attach($role->id);
         } else {
-            // Default role (e.g., User or Investigator)
-            $defaultRole = \App\Models\Role::where('name', 'User')->orWhere('name', 'Investigator')->first();
-            if ($defaultRole) {
-                $user->roles()->attach($defaultRole->id);
+            $fallbackRole = \App\Models\Role::where('name', 'Witness')->orWhere('name', 'User')->first();
+            if ($fallbackRole) {
+                $user->roles()->attach($fallbackRole->id);
             }
         }
 
         event(new Registered($user));
 
-        // If user requested Judge or Lawyer role, don't auto-login, show pending message
-        if ($request->role_requested && in_array($request->role_requested, ['Judge', 'Lawyer'])) {
-            return redirect()->route('login')->with('status', 'Registration successful! Your account is pending admin verification. You will be able to login once approved.');
+        // If user requested Judge or Lawyer, hold for administrative credential review
+        if ($requiresReview) {
+            return redirect()->route('login')->with('status', "Registration submitted! As a {$selectedRole}, your account is undergoing administrative credential verification. You will be able to sign in once approved.");
         }
 
         Auth::login($user);

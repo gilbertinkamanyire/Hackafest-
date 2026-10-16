@@ -16,7 +16,6 @@ class RolesSeeder extends Seeder
             ['name' => 'Admin', 'description' => 'Administrator with full access'],
             ['name' => 'Judge', 'description' => 'Judicial officer with permission to review evidence'],
             ['name' => 'Lawyer', 'description' => 'Legal practitioner representing clients'],
-            ['name' => 'Investigator', 'description' => 'Police or legal investigator who uploads evidence'],
             ['name' => 'Witness', 'description' => 'Person submitting evidence or testimony'],
         ];
 

@@ -19,21 +19,33 @@ class EvidenceController extends Controller
 
     /**
      * Show evidence upload form
+     * Restricted to Witnesses only
      */
     public function create()
     {
+        $user = Auth::user();
+        if (!$user->hasRole('Witness')) {
+            abort(403, 'Unauthorized. Only sworn witnesses are permitted to capture and submit evidence to the Vault.');
+        }
+
         return view('upload');
     }
 
     /**
      * Handle evidence upload with full metadata capture
+     * Restricted to Witnesses only
      */
     public function store(Request $request)
     {
+        $user = Auth::user();
+        if (!$user->hasRole('Witness')) {
+            abort(403, 'Unauthorized. Only sworn witnesses are permitted to capture and submit evidence to the Vault.');
+        }
+
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string|max:5000',
-            'file' => 'required|file|max:10240', // 10MB max
+            'file' => 'required|file|max:25600', // 25MB max
         ]);
 
         $file = $request->file('file');
@@ -45,8 +57,30 @@ class EvidenceController extends Controller
         // Generate SHA-256 hash for integrity verification
         $hash = hash('sha256', $fileContent);
 
-        // Store file securely
-        $path = $file->storeAs('evidence', $hash . '_' . $originalName, 'public');
+        // Concurrency lock per user to strictly prevent double submission
+        $lockKey = 'evidence_store_lock_' . Auth::id();
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 15);
+
+        if (!$lock->get()) {
+            return redirect()->route('dashboard')->with('info', 
+                'Exhibit upload is currently being processed. Please wait a moment.'
+            );
+        }
+
+        try {
+            // Prevent double submission of identical exhibit
+            $existing = Evidence::where('file_hash', $hash)
+                ->where('uploaded_by', Auth::id())
+                ->first();
+
+            if ($existing) {
+                return redirect()->route('dashboard')->with('success', 
+                    'Exhibit already recorded! SHA-256 Hash: ' . substr($hash, 0, 16) . '...'
+                );
+            }
+
+            // Store file securely
+            $path = $file->storeAs('evidence', $hash . '_' . $originalName, 'public');
 
         // Capture timestamp — use form-provided or current time
         $capturedAt = $request->captured_at 
@@ -113,6 +147,9 @@ class EvidenceController extends Controller
         return redirect()->route('dashboard')->with('success', 
             'Evidence uploaded successfully! SHA-256 Hash: ' . substr($hash, 0, 16) . '...'
         );
+        } finally {
+            optional($lock)->release();
+        }
     }
 
     /**
@@ -144,7 +181,7 @@ class EvidenceController extends Controller
         $evidence = Evidence::with('user')->findOrFail($id);
         $user = Auth::user();
 
-        // Only allow owner or roles with permission
+        // Only allow owner or roles with inspection clearance
         if ($evidence->uploaded_by !== $user->id && !$user->hasAnyRole(['Admin', 'Judge', 'Lawyer'])) {
             abort(403, 'Unauthorized access.');
         }
@@ -153,5 +190,56 @@ class EvidenceController extends Controller
         $metadata = $evidence->metadata ? json_decode($evidence->metadata, true) : [];
 
         return view('evidence.show', compact('evidence', 'metadata'));
+    }
+
+    /**
+     * Securely stream evidence for in-app viewing only.
+     * External downloads and attachments are strictly disabled.
+     */
+    public function preview($id)
+    {
+        $evidence = Evidence::findOrFail($id);
+        $user = Auth::user();
+
+        // Strict authorization check: Only uploader or authorized judicial roles
+        if ($evidence->uploaded_by !== $user->id && !$user->hasAnyRole(['Admin', 'Judge', 'Lawyer'])) {
+            abort(403, 'Unauthorized. You do not have judicial clearance to inspect this exhibit.');
+        }
+
+        $filePath = $evidence->getAbsolutePath();
+        if (!$filePath || !file_exists($filePath)) {
+            abort(404, 'The evidentiary file artifact could not be located in secure storage.');
+        }
+
+        $mimeType = $evidence->mime_type ?: (mime_content_type($filePath) ?: 'application/octet-stream');
+
+        // Log inspection event in chain of custody
+        Log::info('Evidence inspected in-app', [
+            'evidence_id' => $evidence->id,
+            'viewed_by' => $user->id,
+            'user_email' => $user->email,
+            'ip' => request()->ip(),
+            'timestamp' => now()->toIso8601String(),
+        ]);
+
+        $headers = [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="vault_exhibit_' . $evidence->id . '"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, private, post-check=0, pre-check=0, max-age=0',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+            'X-Content-Type-Options' => 'nosniff',
+            'X-Frame-Options' => 'SAMEORIGIN',
+        ];
+
+        return response()->file($filePath, $headers);
+    }
+
+    /**
+     * Explicitly reject download requests with 403 Forbidden
+     */
+    public function download($id)
+    {
+        abort(403, 'Evidence download is strictly prohibited under Court Evidence Policy. Exhibits may only be inspected securely within the application.');
     }
 }

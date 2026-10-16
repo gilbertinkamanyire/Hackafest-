@@ -80,7 +80,7 @@ class AdminController extends Controller
         // Remove judge/lawyer roles
         $user->roles()->whereIn('name', ['Judge', 'Lawyer'])->detach();
         // Assign default role
-        $defaultRole = Role::where('name', 'User')->orWhere('name', 'Investigator')->first();
+        $defaultRole = Role::where('name', 'Witness')->orWhere('name', 'User')->first();
         if ($defaultRole) {
             $user->roles()->syncWithoutDetaching([$defaultRole->id]);
         }
@@ -94,7 +94,7 @@ class AdminController extends Controller
      */
     public function createUser()
     {
-        $roles = Role::all();
+        $roles = Role::where('name', '!=', 'Investigator')->get();
         return view('admin.create_user', compact('roles'));
     }
 
@@ -129,7 +129,7 @@ class AdminController extends Controller
     public function editUser($id)
     {
         $user = User::findOrFail($id);
-        $roles = Role::all();
+        $roles = Role::where('name', '!=', 'Investigator')->get();
         $userRoles = $user->roles->pluck('id')->toArray();
 
         return view('admin.edit_user', compact('user', 'roles', 'userRoles'));

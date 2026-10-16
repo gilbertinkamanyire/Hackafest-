@@ -3,65 +3,13 @@
  * PWA Install Prompt, Bottom Nav, Network Status, and Touch Enhancements
  */
 
-// ─── PWA INSTALL PROMPT ──────────────────────────────────────────
+// ─── PWA INSTALL PROMPT (Disabled) ──────────────────────────────
 let deferredPrompt = null;
 
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    showInstallBanner();
 });
-
-function showInstallBanner() {
-    // Don't show if already installed or dismissed
-    if (window.matchMedia('(display-mode: standalone)').matches) return;
-    if (sessionStorage.getItem('pwa-install-dismissed')) return;
-
-    const banner = document.createElement('div');
-    banner.id = 'pwa-install-banner';
-    banner.innerHTML = `
-        <div class="pwa-banner-content">
-            <div class="pwa-banner-icon">
-                <img src="/images/logo-192.png" alt="eWitnessVault" width="40" height="40" style="border-radius: 10px;">
-            </div>
-            <div class="pwa-banner-text">
-                <div class="pwa-banner-title">Install eWitnessVault</div>
-                <div class="pwa-banner-subtitle">Quick access & offline support</div>
-            </div>
-            <div class="pwa-banner-actions">
-                <button class="pwa-btn-install" onclick="installPWA()">Install</button>
-                <button class="pwa-btn-dismiss" onclick="dismissInstallBanner()" aria-label="Dismiss">&times;</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(banner);
-
-    // Animate in
-    requestAnimationFrame(() => {
-        banner.classList.add('pwa-banner-visible');
-    });
-}
-
-function installPWA() {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(choice => {
-        if (choice.outcome === 'accepted') {
-            console.log('[PWA] User accepted install');
-        }
-        deferredPrompt = null;
-        dismissInstallBanner();
-    });
-}
-
-function dismissInstallBanner() {
-    const banner = document.getElementById('pwa-install-banner');
-    if (banner) {
-        banner.classList.remove('pwa-banner-visible');
-        setTimeout(() => banner.remove(), 400);
-    }
-    sessionStorage.setItem('pwa-install-dismissed', 'true');
-}
 
 // ─── NETWORK STATUS TOAST ────────────────────────────────────────
 let wasOffline = !navigator.onLine;

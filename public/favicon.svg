@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141a2e"/>
+      <stop offset="100%" stop-color="#050811"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="50%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark rounded square container matching header badge -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#bgGrad)"/>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="none" stroke="url(#goldGrad)" stroke-width="2.5"/>
+
+  <!-- Tabler ti-scale: Scales of Justice in bright gold -->
+  <g transform="translate(10, 10) scale(1.833)" stroke="#fbbf24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M7 20h10"/>
+    <path d="M6 6l6 -1l6 1"/>
+    <path d="M12 5v15"/>
+    <path d="M9 11l-3 -6l-3 6a3 3 0 0 0 6 0"/>
+    <path d="M21 11l-3 -6l-3 6a3 3 0 0 0 6 0"/>
+  </g>
+</svg>

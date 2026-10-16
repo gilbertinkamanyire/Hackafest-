@@ -60,7 +60,7 @@ class Evidence extends Model
     }
 
     /**
-     * Relationship: Evidence is assigned to a user (Investigator)
+     * Relationship: Evidence is assigned to a user
      */
     public function assignedTo()
     {
@@ -76,11 +76,12 @@ class Evidence extends Model
     }
 
     /**
-     * Accessor for file URL (secure public storage)
+     * Accessor for file URL — routed exclusively through the secure in-app preview stream
+     * (Direct downloads are forbidden; access requires authentication and role verification)
      */
     public function getFileUrlAttribute()
     {
-        return Storage::disk('public')->url($this->file_path);
+        return route('evidence.preview', $this->id);
     }
     
     /**
@@ -89,6 +90,27 @@ class Evidence extends Model
     public function getStoragePath()
     {
         return storage_path('app/public/' . $this->file_path);
+    }
+
+    /**
+     * Locate the physical file artifact across storage disks
+     */
+    public function getAbsolutePath(): ?string
+    {
+        $possiblePaths = [
+            storage_path('app/public/' . $this->file_path),
+            storage_path('app/' . $this->file_path),
+            storage_path('app/private/' . $this->file_path),
+            public_path('storage/' . $this->file_path),
+        ];
+
+        foreach ($possiblePaths as $p) {
+            if (file_exists($p)) {
+                return $p;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -121,7 +143,7 @@ class Evidence extends Model
      */
     public function getIsImageAttribute(): bool
     {
-        return in_array($this->file_extension, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+        return in_array($this->file_extension, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg']);
     }
 
     /**
@@ -129,7 +151,23 @@ class Evidence extends Model
      */
     public function getIsVideoAttribute(): bool
     {
-        return in_array($this->file_extension, ['mp4', 'webm', 'ogg', 'avi', 'mov']);
+        return in_array($this->file_extension, ['mp4', 'webm', 'ogg', 'avi', 'mov', 'm4v']);
+    }
+
+    /**
+     * Check if the file is an audio recording
+     */
+    public function getIsAudioAttribute(): bool
+    {
+        return in_array($this->file_extension, ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'weba']);
+    }
+
+    /**
+     * Check if the file is plain text / document
+     */
+    public function getIsTextAttribute(): bool
+    {
+        return in_array($this->file_extension, ['txt', 'csv', 'json', 'log', 'xml', 'md']);
     }
 
     /**

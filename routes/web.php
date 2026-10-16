@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\EvidenceController;
+use App\Http\Controllers\CaseController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -18,6 +19,23 @@ Route::middleware('auth')->group(function () {
     Route::post('/evidence', [EvidenceController::class, 'store'])->name('evidence.store');
     Route::get('/evidence', [EvidenceController::class, 'index'])->name('evidence.index');
     Route::get('/evidence/{id}', [EvidenceController::class, 'show'])->name('evidence.show');
+    Route::get('/evidence/{id}/preview', [EvidenceController::class, 'preview'])->name('evidence.preview');
+    Route::get('/evidence/{id}/download', [EvidenceController::class, 'download'])->name('evidence.download');
+
+    // Case Docket Management (Lawyers, Judges, Admins)
+    Route::get('/cases', [CaseController::class, 'index'])->name('cases.index');
+    Route::get('/cases/create', [CaseController::class, 'create'])->name('cases.create');
+    Route::post('/cases', [CaseController::class, 'store'])->name('cases.store');
+    Route::get('/cases/{id}', [CaseController::class, 'show'])->name('cases.show');
+    Route::get('/cases/{id}/edit', [CaseController::class, 'edit'])->name('cases.edit');
+    Route::put('/cases/{id}', [CaseController::class, 'update'])->name('cases.update');
+    Route::delete('/cases/{id}', [CaseController::class, 'destroy'])->name('cases.destroy');
+    Route::post('/cases/{id}/evidence', [CaseController::class, 'addEvidence'])->name('cases.evidence.add');
+    Route::delete('/cases/{id}/evidence/{evidenceId}', [CaseController::class, 'removeEvidence'])->name('cases.evidence.remove');
+    Route::patch('/cases/{id}/evidence/{evidenceId}/notes', [CaseController::class, 'updateEvidenceNote'])->name('cases.evidence.notes');
+    Route::post('/cases/{id}/assign-judge', [CaseController::class, 'assignJudge'])->name('cases.assign.judge');
+    Route::delete('/cases/{id}/unassign-judge', [CaseController::class, 'unassignJudge'])->name('cases.unassign.judge');
+    Route::post('/cases/{id}/reorder-evidence', [CaseController::class, 'reorderEvidence'])->name('cases.evidence.reorder');
 });
 
 Route::middleware('auth')->group(function () {
