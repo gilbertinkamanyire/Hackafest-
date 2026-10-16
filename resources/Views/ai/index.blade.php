@@ -26,22 +26,30 @@
                 </div>
 
                 {{-- Live API Status Panel --}}
-                <div style="padding: 1rem; background: rgba(30, 41, 59, 0.6); border: 1px solid {{ $connectionOk ? 'rgba(52, 211, 153, 0.35)' : 'rgba(239, 68, 68, 0.35)' }}; border-radius: 14px; margin-bottom: 1.5rem;">
+                <div style="padding: 1rem; background: rgba(30, 41, 59, 0.6); border: 1px solid {{ $connectionOk ? 'rgba(52, 211, 153, 0.35)' : ($configured ? 'rgba(251, 191, 36, 0.35)' : 'rgba(239, 68, 68, 0.35)') }}; border-radius: 14px; margin-bottom: 1.5rem;">
                     <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #c084fc; margin-bottom: 0.75rem;">
                         API Status
                     </div>
 
                     {{-- Connection indicator --}}
                     <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.75rem;">
-                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: {{ $connectionOk ? '#34d399' : '#f87171' }}; box-shadow: 0 0 10px {{ $connectionOk ? '#34d399aa' : '#f87171aa' }};"></span>
-                        <span style="font-size: 0.8125rem; font-weight: 600; color: {{ $connectionOk ? '#34d399' : '#f87171' }};">
-                            {{ $connectionOk ? 'Connected &amp; Ready' : ($configured ? 'Key Invalid / Rejected' : 'Not Configured') }}
+                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: {{ $connectionOk ? '#34d399' : ($configured ? '#fbbf24' : '#f87171') }}; box-shadow: 0 0 10px {{ $connectionOk ? '#34d399aa' : ($configured ? '#fbbf24aa' : '#f87171aa') }};"></span>
+                        <span style="font-size: 0.8125rem; font-weight: 600; color: {{ $connectionOk ? '#34d399' : ($configured ? '#fbbf24' : '#f87171') }};">
+                            @if($connectionOk)
+                                Connected &amp; Ready
+                            @elseif($configured && $connectionError && str_contains(strtolower($connectionError), 'invalid'))
+                                Key Invalid / Rejected
+                            @elseif($configured)
+                                High Demand / Fallback Mode
+                            @else
+                                Not Configured
+                            @endif
                         </span>
                     </div>
 
                     <div style="font-size: 0.72rem; color: #94a3b8; line-height: 1.7;">
                         <div>Backend: <code style="color: #cbd5e1; background: rgba(15,23,42,0.6); padding: 0.15rem 0.4rem; border-radius: 4px;">{{ $backend }}</code></div>
-                        <div style="margin-top: 0.3rem;">Model: <code style="color: #cbd5e1; background: rgba(15,23,42,0.6); padding: 0.15rem 0.4rem; border-radius: 4px;">{{ config('gemma.model', 'gemma-3-1b-it') }}</code></div>
+                        <div style="margin-top: 0.3rem;">Model: <code style="color: #cbd5e1; background: rgba(15,23,42,0.6); padding: 0.15rem 0.4rem; border-radius: 4px;">{{ $activeModel ?? config('gemma.model', 'gemini-flash-lite-latest') }}</code></div>
                         @if($apiKeyHint)
                         <div style="margin-top: 0.3rem;">Key: <code style="color: #cbd5e1; background: rgba(15,23,42,0.6); padding: 0.15rem 0.4rem; border-radius: 4px;">{{ $apiKeyHint }}</code></div>
                         @endif
@@ -61,7 +69,11 @@
 
         <main class="auth-split__content" style="display: flex; flex-direction: column; justify-content: center; padding: 2.5rem; overflow-y: auto;">
 
-            @if(!$connectionOk)
+            @php
+                $isHardKeyError = !$configured || ($connectionError && str_contains(strtolower($connectionError), 'invalid'));
+            @endphp
+
+            @if($isHardKeyError)
                 {{-- ═══════════ SETUP GUIDE ═══════════ --}}
                 <div style="max-width: 540px; margin: 0 auto; width: 100%;">
                     <div style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.65rem; border-radius: 50px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem;">
@@ -144,9 +156,19 @@
 
             @else
                 {{-- ═══════════ AI FEATURES GRID ═══════════ --}}
+                @if(!$connectionOk && $configured)
+                    <div style="padding: 0.85rem 1.25rem; border-radius: 12px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); color: #fbbf24; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 0.65rem; font-size: 0.825rem;">
+                            <i class="ti ti-info-circle" style="font-size: 1.15rem;"></i>
+                            <span>{{ $connectionError ?? 'Upstream provider is experiencing temporary demand spikes. Automatic model failover is active.' }}</span>
+                        </div>
+                        <a href="{{ route('ai.index') }}" style="font-size: 0.78rem; color: #fbbf24; text-decoration: underline; white-space: nowrap;">Refresh Status</a>
+                    </div>
+                @endif
+
                 <div class="mb-6">
-                    <div style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.65rem; border-radius: 50px; background: rgba(52, 211, 153, 0.12); border: 1px solid rgba(52, 211, 153, 0.35); color: #34d399; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem;">
-                        <i class="ti ti-check"></i> AI Ready — {{ $backend }}
+                    <div style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.65rem; border-radius: 50px; background: {{ $connectionOk ? 'rgba(52, 211, 153, 0.12)' : 'rgba(251, 191, 36, 0.12)' }}; border: 1px solid {{ $connectionOk ? 'rgba(52, 211, 153, 0.35)' : 'rgba(251, 191, 36, 0.35)' }}; color: {{ $connectionOk ? '#34d399' : '#fbbf24' }}; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem;">
+                        <i class="ti ti-{{ $connectionOk ? 'check' : 'bolt' }}"></i> AI Ready &mdash; {{ $backend }} ({{ $activeModel ?? config('gemma.model') }})
                     </div>
                     <h2 style="font-size: 1.75rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.02em; margin-bottom: 0.5rem;">
                         Evidentiary AI Tools

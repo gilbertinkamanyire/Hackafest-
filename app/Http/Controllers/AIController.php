@@ -38,16 +38,18 @@ class AIController extends Controller
         // Only test live connection if a key is present (avoids timeout on load)
         $connectionOk    = false;
         $connectionError = null;
+        $activeModel     = config('gemma.model', 'gemini-flash-lite-latest');
 
         if ($configured) {
             $test = $this->gemma->testConnection();
             $connectionOk    = $test['valid'];
             $connectionError = $test['error'] ?? null;
+            $activeModel     = $test['model'] ?? $activeModel;
         }
 
         return view('ai.index', compact(
             'features', 'configured', 'backend',
-            'apiKeyHint', 'connectionOk', 'connectionError'
+            'apiKeyHint', 'connectionOk', 'connectionError', 'activeModel'
         ));
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -73,19 +74,30 @@ class GemmaService
      * Quick ping to verify the API key actually works.
      * Returns ['valid' => true] or ['valid' => false, 'error' => '...']
      */
-    public function testConnection(): array
+    public function testConnection(bool $forceFresh = false): array
     {
         if (!$this->isConfigured()) {
             return ['valid' => false, 'error' => 'No API key set. Add GEMINI_API_KEY to your .env file.'];
         }
 
-        $result = $this->generate('Reply with: OK', ['max_tokens' => 120, 'temperature' => 0.0]);
-
-        if ($result['success']) {
-            return ['valid' => true, 'backend' => $this->getBackendName()];
+        $cacheKey = 'gemma_connection_check_' . substr(md5($this->apiKey), 0, 8);
+        if ($forceFresh) {
+            Cache::forget($cacheKey);
         }
 
-        return ['valid' => false, 'error' => $result['error']];
+        return Cache::remember($cacheKey, 300, function () {
+            $result = $this->generate('Reply with: OK', ['max_tokens' => 20, 'temperature' => 0.0]);
+
+            if ($result['success']) {
+                return [
+                    'valid'   => true,
+                    'backend' => $this->getBackendName(),
+                    'model'   => $result['model'] ?? $this->model,
+                ];
+            }
+
+            return ['valid' => false, 'error' => $result['error']];
+        });
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -117,8 +129,15 @@ class GemmaService
 
     protected function generateGoogle(string $prompt, array $options = []): array
     {
+        // Robust list of available models on Google AI Studio
         $candidateModels = array_unique([
             $this->model,
+            'gemini-flash-lite-latest',
+            'gemini-3.5-flash-lite',
+            'gemini-3.8-flash',
+            'gemini-3.1-flash-lite',
+            'gemini-flash-latest',
+            'gemma-4-26b-a4b-it',
             'gemini-3.5-flash',
             'gemini-3.6-flash',
             'gemini-3.7-flash',
@@ -138,7 +157,7 @@ class GemmaService
             ];
 
             try {
-                $response = Http::timeout(min($this->timeout, 15))
+                $response = Http::timeout(min($this->timeout, 20))
                     ->withHeaders(['Content-Type' => 'application/json'])
                     ->post($endpoint, $payload);
 
@@ -161,20 +180,24 @@ class GemmaService
                 $errMsg = $response->json('error.message') ?? $response->body();
                 Log::warning("Google AI model {$model} returned status {$response->status()}", ['body' => $errMsg]);
 
-                // If error is 503 (busy) or 404 (not found), backoff briefly and try the next candidate model
-                if (in_array($response->status(), [404, 503])) {
+                // If error is 404 (model not found/deprecated), 429 (rate limit on this model), or 503 (busy/high demand), try the next candidate model!
+                if (in_array($response->status(), [404, 429, 503])) {
                     $lastError = $errMsg;
-                    usleep(600000); // 600ms backoff
+                    usleep(300000); // 300ms backoff
                     continue;
                 }
 
-                $friendly = match ($response->status()) {
-                    401     => 'Invalid Google API key. Get one free at https://aistudio.google.com/app/apikey',
-                    403     => 'API key lacks permission for this model.',
-                    429     => 'Rate limit reached. Wait a moment and retry.',
-                    default => "Google AI error ({$response->status()}): {$errMsg}",
-                };
+                // If unauthorized 401, the key itself is rejected - stop immediately
+                if ($response->status() === 401) {
+                    return ['success' => false, 'error' => 'Invalid Google API key. Get one free at https://aistudio.google.com/app/apikey'];
+                }
 
+                if ($response->status() === 403) {
+                    $lastError = 'API key lacks permission for ' . $model;
+                    continue;
+                }
+
+                $friendly = "Google AI error ({$response->status()}): {$errMsg}";
                 return ['success' => false, 'error' => $friendly];
 
             } catch (\Exception $e) {
