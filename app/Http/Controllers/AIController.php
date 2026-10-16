@@ -16,6 +16,13 @@ class AIController extends Controller
     {
         $this->gemma = $gemma;
         $this->middleware('auth');
+        $this->middleware(function ($request, $next) {
+            $user = $request->user();
+            if (!$user || !$user->hasAnyRole(['Judge', 'Lawyer', 'Admin'])) {
+                abort(403, 'Access Denied. Gemma AI evidentiary analysis tools are strictly reserved for Judges and Legal Counsel. Witnesses cannot access or use Gemma AI.');
+            }
+            return $next($request);
+        });
     }
 
     /**
@@ -23,10 +30,25 @@ class AIController extends Controller
      */
     public function index()
     {
-        $features = config('gemma.features', []);
-        $configured = $this->gemma->isConfigured();
+        $features    = config('gemma.features', []);
+        $configured  = $this->gemma->isConfigured();
+        $backend     = $this->gemma->getBackendName();
+        $apiKeyHint  = $configured ? substr(config('gemma.api_key', ''), 0, 8) . '...' : null;
 
-        return view('ai.index', compact('features', 'configured'));
+        // Only test live connection if a key is present (avoids timeout on load)
+        $connectionOk    = false;
+        $connectionError = null;
+
+        if ($configured) {
+            $test = $this->gemma->testConnection();
+            $connectionOk    = $test['valid'];
+            $connectionError = $test['error'] ?? null;
+        }
+
+        return view('ai.index', compact(
+            'features', 'configured', 'backend',
+            'apiKeyHint', 'connectionOk', 'connectionError'
+        ));
     }
 
     /**
@@ -34,23 +56,36 @@ class AIController extends Controller
      */
     public function evidenceAnalysis(Request $request)
     {
+        $user = $request->user();
+        if (!$user->hasAnyRole(['Admin', 'Judge', 'Lawyer'])) {
+            abort(403, 'Access Denied. Witnesses cannot access Gemma AI analysis.');
+        }
+
         $evidenceId = $request->query('evidence_id');
 
         $evidence = null;
         if ($evidenceId) {
             $evidence = Evidence::with('user')->findOrFail($evidenceId);
-            $user = $request->user();
-
-            // Authorization: owner or authorized judicial roles
-            if ($evidence->uploaded_by !== $user->id && !$user->hasAnyRole(['Admin', 'Judge', 'Lawyer'])) {
-                abort(403, 'Unauthorized access to this evidence.');
-            }
         }
 
-        $recentEvidence = Evidence::with('user')
-            ->orderBy('created_at', 'desc')
-            ->limit(20)
-            ->get();
+        if ($user->hasRole('Judge')) {
+            $assignedCaseIds = \App\Models\LegalCase::where('assigned_judge_id', $user->id)->pluck('id');
+            $assignedEvIds   = \DB::table('case_evidence')->whereIn('case_id', $assignedCaseIds)->pluck('evidence_id');
+            $recentEvidence  = Evidence::with('user')
+                ->whereIn('id', $assignedEvIds)
+                ->orderBy('created_at', 'desc')
+                ->limit(20)
+                ->get();
+
+            if ($recentEvidence->isEmpty()) {
+                $recentEvidence = Evidence::with('user')->orderBy('created_at', 'desc')->limit(20)->get();
+            }
+        } else {
+            $recentEvidence = Evidence::with('user')
+                ->orderBy('created_at', 'desc')
+                ->limit(20)
+                ->get();
+        }
 
         return view('ai.evidence-analysis', compact('evidence', 'recentEvidence'));
     }
@@ -60,6 +95,11 @@ class AIController extends Controller
      */
     public function analyzeEvidence(AIAnalysisRequest $request, GemmaService $gemma)
     {
+        $user = $request->user();
+        if (!$user->hasAnyRole(['Admin', 'Judge', 'Lawyer'])) {
+            abort(403, 'Access Denied. Witnesses cannot use Gemma AI.');
+        }
+
         if (!$gemma->isConfigured()) {
             return back()->withErrors(['Gemma API is not configured. Please contact the administrator.']);
         }
@@ -67,20 +107,22 @@ class AIController extends Controller
         $evidenceId = $request->validated('evidence_id');
         $evidence = Evidence::with('user')->findOrFail($evidenceId);
 
-        $user = $request->user();
-        if ($evidence->uploaded_by !== $user->id && !$user->hasAnyRole(['Admin', 'Judge', 'Lawyer'])) {
-            abort(403, 'Unauthorized access to this evidence.');
-        }
-
         $evidenceData = [
-            'id' => $evidence->id,
-            'title' => $evidence->title,
-            'description' => $evidence->description,
-            'file_hash' => $evidence->file_hash,
-            'mime_type' => $evidence->mime_type,
-            'file_size' => $evidence->file_size,
-            'captured_at' => $evidence->captured_at?->toIso8601String(),
-            'metadata' => $evidence->metadata,
+            'id'           => $evidence->id,
+            'title'        => $evidence->title,
+            'description'  => $evidence->description,
+            'file_hash'    => $evidence->file_hash,
+            'mime_type'    => $evidence->mime_type,
+            'file_size'    => $evidence->file_size,
+            'latitude'     => $evidence->latitude,
+            'longitude'    => $evidence->longitude,
+            'altitude'     => $evidence->altitude,
+            'gps_accuracy' => $evidence->gps_accuracy,
+            'device_info'  => $evidence->device_info,
+            'captured_at'  => $evidence->captured_at?->toIso8601String(),
+            'ingested_at'  => $evidence->created_at?->toIso8601String(),
+            'uploaded_by'  => $evidence->user?->name ?? 'Witness ID #' . $evidence->uploaded_by,
+            'metadata'     => $evidence->metadata,
         ];
 
         $result = $gemma->analyzeEvidence($evidenceData);
@@ -92,7 +134,7 @@ class AIController extends Controller
         // Store the analysis in session for display
         session(['ai_analysis' => $result]);
 
-        return redirect()->route('ai.evidence-results', ['evidence_id' => $evidence->id])
+        return redirect()->route('ai.evidence-results', ['evidenceId' => $evidence->id])
             ->with('success', 'Evidence analysis completed successfully.');
     }
 
@@ -101,12 +143,12 @@ class AIController extends Controller
      */
     public function evidenceResults(Request $request, $evidenceId)
     {
-        $evidence = Evidence::with('user')->findOrFail($evidenceId);
         $user = $request->user();
-
-        if ($evidence->uploaded_by !== $user->id && !$user->hasAnyRole(['Admin', 'Judge', 'Lawyer'])) {
-            abort(403, 'Unauthorized access to this evidence.');
+        if (!$user->hasAnyRole(['Admin', 'Judge', 'Lawyer'])) {
+            abort(403, 'Access Denied. Witnesses cannot view Gemma AI results.');
         }
+
+        $evidence = Evidence::with('user')->findOrFail($evidenceId);
 
         $analysis = session('ai_analysis');
 
@@ -148,7 +190,7 @@ class AIController extends Controller
         }
 
         $caseId = $request->validated('case_id');
-        $case = LegalCase::with('evidence')->findOrFail($caseId);
+        $case = LegalCase::with(['evidence.user', 'lawyer', 'assignedJudge'])->findOrFail($caseId);
 
         $user = $request->user();
         if (!$user->hasAnyRole(['Admin', 'Judge', 'Lawyer'])) {
@@ -156,17 +198,26 @@ class AIController extends Controller
         }
 
         $caseData = [
-            'id' => $case->id,
-            'title' => $case->title,
-            'description' => $case->description,
-            'status' => $case->status,
+            'id'              => $case->id,
+            'case_number'     => $case->case_number,
+            'docket_number'   => $case->case_number,
+            'title'           => $case->title,
+            'description'     => $case->description,
+            'status'          => $case->status,
+            'court_reference' => $case->court_reference,
+            'hearing_date'    => $case->hearing_date?->format('M d, Y'),
+            'lawyer'          => $case->lawyer?->name,
+            'assigned_judge'  => $case->assignedJudge?->name,
         ];
 
         $evidenceList = $case->evidence->map(fn($e) => [
-            'id' => $e->id,
-            'title' => $e->title,
+            'id'          => $e->id,
+            'title'       => $e->title,
             'description' => $e->description,
-            'mime_type' => $e->mime_type,
+            'mime_type'   => $e->mime_type,
+            'file_hash'   => $e->file_hash,
+            'file_size'   => $e->file_size,
+            'witness'     => $e->user?->name ?? 'Witness #' . $e->uploaded_by,
         ])->toArray();
 
         $result = $gemma->summarizeCase($caseData, $evidenceList);
@@ -177,7 +228,7 @@ class AIController extends Controller
 
         session(['ai_case_summary' => $result]);
 
-        return redirect()->route('ai.case-results', ['case_id' => $case->id])
+        return redirect()->route('ai.case-results', ['caseId' => $case->id])
             ->with('success', 'Case summary generated successfully.');
     }
 

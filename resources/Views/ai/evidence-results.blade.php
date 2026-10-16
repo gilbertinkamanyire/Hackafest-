@@ -69,7 +69,7 @@
             @if($analysis && $analysis['success'])
                 <div style="margin-bottom: 2rem;">
                     <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #c084fc; margin-bottom: 0.5rem;">Generated Analysis</div>
-                    <div style="background: rgba(8, 12, 22, 0.6); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: 12px; padding: 1.5rem; font-family: 'Outfit', sans-serif; line-height: 1.7; color: #e2e8f0; white-space: pre-wrap;">{{ $analysis['text'] }}</div>
+                    <div style="background: rgba(8, 12, 22, 0.6); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: 12px; padding: 1.5rem; font-family: 'Outfit', sans-serif; line-height: 1.7; color: #e2e8f0; white-space: pre-wrap;">{{ $analysis['text'] ?? $analysis['analysis'] ?? '' }}</div>
                     <div style="font-size: 0.7rem; color: #64748b; margin-top: 0.75rem; font-style: italic;">
                         Generated at: {{ $analysis['generated_at'] }}
                     </div>

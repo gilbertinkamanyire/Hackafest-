@@ -181,9 +181,10 @@ class EvidenceController extends Controller
         $evidence = Evidence::with('user')->findOrFail($id);
         $user = Auth::user();
 
-        // Only allow owner or roles with inspection clearance
-        if ($evidence->uploaded_by !== $user->id && !$user->hasAnyRole(['Admin', 'Judge', 'Lawyer'])) {
-            abort(403, 'Unauthorized access.');
+        // Strict authorization check: Witnesses may only view their own submitted evidence.
+        // Judges, Lawyers, and Admins have judicial clearance to inspect evidence.
+        if (!$user->hasAnyRole(['Admin', 'Judge', 'Lawyer']) && $evidence->uploaded_by !== $user->id) {
+            abort(403, 'Unauthorized. Witnesses may only view their own submitted evidence exhibits.');
         }
 
         // Decode stored metadata
@@ -201,9 +202,9 @@ class EvidenceController extends Controller
         $evidence = Evidence::findOrFail($id);
         $user = Auth::user();
 
-        // Strict authorization check: Only uploader or authorized judicial roles
-        if ($evidence->uploaded_by !== $user->id && !$user->hasAnyRole(['Admin', 'Judge', 'Lawyer'])) {
-            abort(403, 'Unauthorized. You do not have judicial clearance to inspect this exhibit.');
+        // Strict authorization check: Witnesses may only inspect their own submitted exhibits.
+        if (!$user->hasAnyRole(['Admin', 'Judge', 'Lawyer']) && $evidence->uploaded_by !== $user->id) {
+            abort(403, 'Unauthorized. Witnesses may only inspect their own submitted exhibits.');
         }
 
         $filePath = $evidence->getAbsolutePath();

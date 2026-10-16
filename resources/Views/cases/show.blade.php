@@ -603,6 +603,12 @@
                     <span class="status-badge" style="background: {{ $sc['bg'] }}; color: {{ $sc['text'] }}; border-color: {{ $sc['border'] }};">
                         {{ $case->statusLabel() }}
                     </span>
+                    @if(Auth::user()->hasAnyRole(['Judge', 'Lawyer', 'Admin']))
+                    <a href="{{ route('ai.case-summary', ['case_id' => $case->id]) }}" class="btn-action"
+                       style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border-color: rgba(168, 85, 247, 0.4);">
+                        <i class="ti ti-sparkles"></i> Summarize with AI
+                    </a>
+                    @endif
                     @if(Auth::user()->hasAnyRole(['Lawyer', 'Admin']) && ($case->created_by === Auth::id() || Auth::user()->hasRole('Admin')))
                     <a href="{{ route('cases.edit', $case->id) }}" class="btn-action btn-edit">
                         <i class="ti ti-edit"></i> Edit Docket

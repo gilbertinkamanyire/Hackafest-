@@ -58,15 +58,15 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureUserIsAdmin::class])->pref
     Route::delete('/users/{id}', [AdminController::class, 'deleteUser'])->name('users.delete');
 });
 
-// AI Features
-Route::middleware('auth')->prefix('ai')->name('ai.')->group(function () {
+// AI Features — Restricted strictly to Judges, Lawyers, and Admins (Witnesses prohibited)
+Route::middleware(['auth', 'judicial.ai'])->prefix('ai')->name('ai.')->group(function () {
     Route::get('/', [AIController::class, 'index'])->name('index');
     Route::get('/evidence/analyze', [AIController::class, 'evidenceAnalysis'])->name('evidence-analysis');
     Route::post('/evidence/analyze', [AIController::class, 'analyzeEvidence'])->name('evidence.analyze');
-    Route::get('/evidence/{evidenceId}/results', [AIController::class, 'evidenceResults'])->name('evidence.results');
+    Route::get('/evidence/{evidenceId}/results', [AIController::class, 'evidenceResults'])->name('evidence-results');
     Route::get('/cases/summarize', [AIController::class, 'caseSummary'])->name('case-summary');
     Route::post('/cases/summarize', [AIController::class, 'summarizeCase'])->name('case.summarize');
-    Route::get('/cases/{caseId}/results', [AIController::class, 'caseResults'])->name('case.results');
+    Route::get('/cases/{caseId}/results', [AIController::class, 'caseResults'])->name('case-results');
 });
 
 require __DIR__.'/auth.php';

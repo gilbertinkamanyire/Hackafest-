@@ -387,6 +387,14 @@
 
                     <!-- Quick Actions -->
                     <div style="padding-top: 0.5rem; display: flex; flex-direction: column; gap: 0.65rem;">
+                        @if(Auth::check() && Auth::user()->hasAnyRole(['Judge', 'Lawyer', 'Admin']))
+                        <a href="{{ route('ai.evidence-analysis', ['evidence_id' => $evidence->id]) }}"
+                           style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.8rem; background: linear-gradient(135deg, rgba(124, 58, 237, 0.25), rgba(168, 85, 247, 0.25)); border: 1.5px solid rgba(168, 85, 247, 0.45); border-radius: 12px; color: #c084fc; font-weight: 700; text-decoration: none; font-size: 0.85rem; transition: all 0.2s;"
+                           onmouseover="this.style.background='rgba(168, 85, 247, 0.35)';"
+                           onmouseout="this.style.background='rgba(124, 58, 237, 0.25)';">
+                            <i class="ti ti-sparkles"></i> Analyze with Gemma AI &rarr;
+                        </a>
+                        @endif
                         <a href="{{ $evidence->file_url }}" download
                            style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.8rem; background: rgba(245, 158, 11, 0.15); border: 1.5px solid rgba(245, 158, 11, 0.4); border-radius: 12px; color: #fbbf24; font-weight: 700; text-decoration: none; font-size: 0.85rem; transition: all 0.2s;"
                            onmouseover="this.style.background='rgba(245, 158, 11, 0.25)';"

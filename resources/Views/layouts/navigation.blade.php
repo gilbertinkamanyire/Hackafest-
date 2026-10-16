@@ -48,6 +48,7 @@
                         Cases
                     </a>
                     @endif
+                    @if(Auth::check() && Auth::user()->hasAnyRole(['Judge', 'Lawyer', 'Admin']))
                     <a href="{{ route('ai.index') }}"
                        style="display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; text-decoration: none; transition: all 0.2s;
                        {{ request()->routeIs('ai.*') ? 'background: rgba(168,85,247,0.15); color: #c084fc; border: 1px solid rgba(168,85,247,0.3);' : 'color: #94a3b8; border: 1px solid transparent;' }}"
@@ -56,6 +57,7 @@
                         <i class="ti ti-sparkles" style="font-size: 1rem; color: #c084fc;"></i>
                         Gemma AI
                     </a>
+                    @endif
                     @if(Auth::check() && Auth::user()->hasRole('Admin'))
                     <a href="{{ route('admin.dashboard') }}"
                        style="display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; text-decoration: none; transition: all 0.2s;
@@ -133,9 +135,11 @@
                 <i class="ti ti-briefcase"></i> Cases
             </a>
             @endif
+            @if(Auth::check() && Auth::user()->hasAnyRole(['Judge', 'Lawyer', 'Admin']))
             <a href="{{ route('ai.index') }}" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; text-decoration: none; color: {{ request()->routeIs('ai.*') ? '#c084fc' : '#94a3b8' }}; background: {{ request()->routeIs('ai.*') ? 'rgba(168,85,247,0.1)' : 'transparent' }};">
                 <i class="ti ti-sparkles"></i> Gemma AI
             </a>
+            @endif
             @if(Auth::check() && Auth::user()->hasRole('Admin'))
             <a href="{{ route('admin.dashboard') }}" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; text-decoration: none; color: #94a3b8;">
                 <i class="ti ti-shield-cog"></i> Admin
