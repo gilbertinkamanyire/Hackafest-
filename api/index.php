@@ -1,6 +1,10 @@
 <?php
 
-// Ensure writable directories exist in /tmp on Vercel serverless environment
+// Suppress deprecations from breaking HTTP response headers in serverless output
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+ini_set('display_errors', '0');
+
+// Ensure writable directories exist in /tmp on Vercel
 $tmpDirs = [
     '/tmp/storage/framework/views',
     '/tmp/storage/framework/cache',
