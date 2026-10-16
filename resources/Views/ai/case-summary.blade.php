@@ -105,7 +105,7 @@
             <div style="margin-top: 2rem;">
                 <h3 style="font-size: 1rem; font-weight: 700; color: #e2e8f0; margin-bottom: 1rem;">Available Cases</h3>
                 <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                    @foreach($cases as $item)
+                    @forelse($cases as $item)
                         <a href="{{ route('ai.case-summary', ['case_id' => $item->id]) }}" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(71, 85, 105, 0.2); background: rgba(8, 12, 22, 0.4); text-decoration: none; font-size: 0.8125rem; color: #cbd5e1; transition: all 0.2s;"
                            onmouseover="this.style.borderColor='rgba(168, 85, 247, 0.4)'; this.style.background='rgba(8, 12, 22, 0.6)';"
                            onmouseout="this.style.borderColor='rgba(71, 85, 105, 0.2)'; this.style.background='rgba(8, 12, 22, 0.4)';">
@@ -124,7 +124,7 @@
                         <div style="padding: 1rem; text-align: center; color: #94a3b8; font-size: 0.8125rem;">
                             No cases available.
                         </div>
-                    @endforeach
+                    @endforelse
                 </div>
             </div>
         </main>
